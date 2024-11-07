@@ -7,9 +7,18 @@ const alteration: AlterationScript = {
     await pool.query(sql`
       alter type application_type add value if not exists 'SAML';
     `);
+
+    await pool.query(sql`
+      alter table applications 
+        add constraint check_saml_app_third_party_consistency 
+        check (type != 'SAML' OR (type = 'SAML' AND is_third_party = true));
+    `);
   },
   down: async (pool) => {
     await pool.query(sql`
+      alter table applications 
+        drop constraint if exists check_saml_app_third_party_consistency;
+
       delete from applications where type = 'SAML';
     `);
 

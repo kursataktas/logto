@@ -17,7 +17,10 @@ create table applications (
   custom_data jsonb /* @use JsonObject */ not null default '{}'::jsonb,
   is_third_party boolean not null default false,
   created_at timestamptz not null default(now()),
-  primary key (id)
+  primary key (id),
+  constraint check_saml_app_third_party_consistency check (
+    type != 'SAML' OR (type = 'SAML' AND is_third_party = true)
+  )
 );
 
 create index applications__id
