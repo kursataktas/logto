@@ -1,5 +1,5 @@
 // TODO: @darcyYe refactor this file later to remove disable max line comment
-
+/* eslint-disable max-lines */
 import type { Role } from '@logto/schemas';
 import {
   Applications,
@@ -13,6 +13,7 @@ import { generateStandardId, generateStandardSecret } from '@logto/shared';
 import { conditional } from '@silverhand/essentials';
 import { boolean, object, string, z } from 'zod';
 
+import { EnvSet } from '#src/env-set/index.js';
 import RequestError from '#src/errors/RequestError/index.js';
 import koaGuard from '#src/middleware/koa-guard.js';
 import koaPagination from '#src/middleware/koa-pagination.js';
@@ -147,9 +148,22 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
       response: Applications.guard,
       status: [200, 400, 422, 500],
     }),
-
+    // eslint-disable-next-line complexity
     async (ctx, next) => {
       const { oidcClientMetadata, protectedAppMetadata, ...rest } = ctx.guard.body;
+
+      if (EnvSet.values.isDevFeaturesEnabled && rest.type === ApplicationType.SAML) {
+        // SAML apps should always be third-party apps.
+        assertThat(rest.isThirdParty === true, 'application.saml_app_should_always_be_third_party');
+
+        // SAML apps should not manually specify OIDC client metadata, but should be updated automatically.
+        assertThat(
+          !oidcClientMetadata,
+          'application.should_not_specify_saml_app_oidc_client_metadata'
+        );
+
+        // TODO(@darcy): auto create a SAML app proxy record once the table is ready.
+      }
 
       await Promise.all([
         rest.type === ApplicationType.MachineToMachine &&
@@ -165,7 +179,8 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
 
       if (rest.isThirdParty) {
         assertThat(
-          rest.type === ApplicationType.Traditional,
+          rest.type === ApplicationType.Traditional ||
+            (EnvSet.values.isDevFeaturesEnabled && rest.type === ApplicationType.SAML),
           'application.invalid_third_party_application_type'
         );
       }
@@ -262,6 +277,14 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
 
       const { isAdmin, protectedAppMetadata, ...rest } = body;
 
+      const pendingUpdateApplication = await queries.applications.findApplicationById(id);
+      if (
+        EnvSet.values.isDevFeaturesEnabled &&
+        pendingUpdateApplication.type === ApplicationType.SAML
+      ) {
+        throw new RequestError('application.saml_app_cannot_be_updated_with_patch');
+      }
+
       // @deprecated
       // User can enable the admin access of Machine-to-Machine apps by switching on a toggle on Admin Console.
       // Since those apps sit in the user tenant, we provide an internal role to apply the necessary scopes.
@@ -292,8 +315,7 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
       }
 
       if (protectedAppMetadata) {
-        const { type, protectedAppMetadata: originProtectedAppMetadata } =
-          await queries.applications.findApplicationById(id);
+        const { type, protectedAppMetadata: originProtectedAppMetadata } = pendingUpdateApplication;
         assertThat(type === ApplicationType.Protected, 'application.protected_application_only');
         assertThat(
           originProtectedAppMetadata,
@@ -319,9 +341,10 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
         }
       }
 
-      ctx.body = await (Object.keys(rest).length > 0
-        ? queries.applications.updateApplicationById(id, rest, 'replace')
-        : queries.applications.findApplicationById(id));
+      ctx.body =
+        Object.keys(rest).length > 0
+          ? await queries.applications.updateApplicationById(id, rest, 'replace')
+          : pendingUpdateApplication;
 
       return next();
     }
@@ -359,3 +382,4 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
 
   applicationCustomDataRoutes(router, tenant);
 }
+/* eslint-enable max-lines */

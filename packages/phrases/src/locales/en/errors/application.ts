@@ -10,6 +10,11 @@ const application = {
   protected_app_metadata_is_required: 'Protected app metadata is required.',
   protected_app_not_configured:
     'Protected app provider is not configured. This feature is not available for open source version.',
+  saml_app_should_always_be_third_party: 'SAML app should always be a third-party app.',
+  should_not_specify_saml_app_oidc_client_metadata:
+    'Should not specify OIDC client metadata for SAML apps.',
+  saml_app_cannot_be_updated_with_patch:
+    'Use `PATCH /saml-applications/:id` API to update SAML app.',
   cloudflare_unknown_error: 'Got unknown error when requesting Cloudflare API',
   protected_application_only: 'The feature is only available for protected applications.',
   protected_application_misconfigured: 'Protected application is misconfigured.',
