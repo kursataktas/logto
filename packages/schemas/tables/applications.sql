@@ -1,6 +1,6 @@
 /* init_order = 1 */
 
-create type application_type as enum ('Native', 'SPA', 'Traditional', 'MachineToMachine', 'Protected');
+create type application_type as enum ('Native', 'SPA', 'Traditional', 'MachineToMachine', 'Protected', 'SAML');
 
 create table applications (
   tenant_id varchar(21) not null
@@ -16,13 +16,8 @@ create table applications (
   protected_app_metadata jsonb /* @use ProtectedAppMetadata */,
   custom_data jsonb /* @use JsonObject */ not null default '{}'::jsonb,
   is_third_party boolean not null default false,
-  is_visible boolean not null default true,
   created_at timestamptz not null default(now()),
-  primary key (id),
-  constraint check_visibility_rules check (
-    (is_third_party = true) OR  -- Third-party applications can set any visibility
-    (is_visible = true)         -- Non-third-party applications must remain visible
-  )
+  primary key (id)
 );
 
 create index applications__id

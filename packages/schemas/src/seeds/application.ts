@@ -29,7 +29,6 @@ export const buildDemoAppDataForTenant = (tenantId: string): Application => ({
   customClientMetadata: {},
   protectedAppMetadata: null,
   isThirdParty: false,
-  isVisible: true,
   createdAt: 0,
   customData: {},
 });
