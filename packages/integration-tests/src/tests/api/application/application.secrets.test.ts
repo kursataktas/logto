@@ -27,20 +27,22 @@ describe('application secrets', () => {
     await Promise.all(applications.map(async ({ id }) => deleteApplication(id).catch(noop)));
   });
 
-  it.each(Object.values(ApplicationType))(
+  // Exclude SAML app since it has different API for operations.
+  it.each(Object.values(ApplicationType).filter((type) => type !== ApplicationType.SAML))(
     'should or not to create application secret for %s applications per type',
     async (type) => {
-      const application = await createApplication('application', type, {
-        ...cond(
+      const application = await createApplication(
+        'application',
+        type,
+        cond(
           type === ApplicationType.Protected && {
             protectedAppMetadata: {
               origin: 'https://example.com',
               subDomain: randomString(),
             },
           }
-        ),
-        ...cond(type === ApplicationType.SAML && { isThirdParty: true }),
-      });
+        )
+      );
       expect(application.secret).toMatch(new RegExp(`^${internalPrefix}`));
 
       // Check the default secret

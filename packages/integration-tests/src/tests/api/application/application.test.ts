@@ -36,44 +36,13 @@ describe('application APIs', () => {
   });
 
   it('should throw error when creating a non-third party SAML application', async () => {
-    await expectRejects(
-      createApplication('test-create-saml-app', ApplicationType.SAML, {
-        isThirdParty: false,
-      }),
-      { code: 'application.saml_app_should_always_be_third_party', status: 400 }
-    );
-  });
-
-  it('should throw error when creating a SAML application with OIDC client metadata specified', async () => {
-    await expectRejects(
-      createApplication('test-create-saml-app', ApplicationType.SAML, {
-        isThirdParty: true,
-        oidcClientMetadata: {
-          redirectUris: ['https://example.com'],
-          postLogoutRedirectUris: ['https://example.com'],
-        },
-      }),
-      { code: 'application.should_not_specify_saml_app_oidc_client_metadata', status: 400 }
-    );
-  });
-
-  it('should create SAML third party application successfully and can not be updated with PATCH', async () => {
-    const samlApplication = await createApplication('test-create-saml-app', ApplicationType.SAML, {
-      isThirdParty: true,
+    await expectRejects(createApplication('test-create-saml-app', ApplicationType.SAML), {
+      code: 'application.use_saml_app_api',
+      status: 400,
     });
-
-    expect(samlApplication.type).toBe(ApplicationType.SAML);
-    expect(samlApplication.isThirdParty).toBe(true);
-
-    await expectRejects(
-      updateApplication(samlApplication.id, {
-        name: 'test-update-saml-app',
-      }),
-      { code: 'application.saml_app_cannot_be_updated_with_patch', status: 400 }
-    );
-
-    await deleteApplication(samlApplication.id);
   });
+
+  // TODO: add tests for blocking updating SAML application with `PATCH /applications/:id` API, we can not do it before we implement the `POST /saml-applications` API
 
   it('should create OIDC third party application successfully', async () => {
     const applicationName = 'test-third-party-app';

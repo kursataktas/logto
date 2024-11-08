@@ -152,17 +152,8 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
     async (ctx, next) => {
       const { oidcClientMetadata, protectedAppMetadata, ...rest } = ctx.guard.body;
 
-      if (EnvSet.values.isDevFeaturesEnabled && rest.type === ApplicationType.SAML) {
-        // SAML apps should always be third-party apps.
-        assertThat(rest.isThirdParty === true, 'application.saml_app_should_always_be_third_party');
-
-        // SAML apps should not manually specify OIDC client metadata, but should be updated automatically.
-        assertThat(
-          !oidcClientMetadata,
-          'application.should_not_specify_saml_app_oidc_client_metadata'
-        );
-
-        // TODO(@darcy): auto create a SAML app proxy record once the table is ready.
+      if (rest.type === ApplicationType.SAML) {
+        throw new RequestError('application.use_saml_app_api');
       }
 
       await Promise.all([
@@ -179,8 +170,7 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
 
       if (rest.isThirdParty) {
         assertThat(
-          rest.type === ApplicationType.Traditional ||
-            (EnvSet.values.isDevFeaturesEnabled && rest.type === ApplicationType.SAML),
+          rest.type === ApplicationType.Traditional,
           'application.invalid_third_party_application_type'
         );
       }
@@ -278,11 +268,8 @@ export default function applicationRoutes<T extends ManagementApiRouter>(
       const { isAdmin, protectedAppMetadata, ...rest } = body;
 
       const pendingUpdateApplication = await queries.applications.findApplicationById(id);
-      if (
-        EnvSet.values.isDevFeaturesEnabled &&
-        pendingUpdateApplication.type === ApplicationType.SAML
-      ) {
-        throw new RequestError('application.saml_app_cannot_be_updated_with_patch');
+      if (pendingUpdateApplication.type === ApplicationType.SAML) {
+        throw new RequestError('application.use_saml_app_api');
       }
 
       // @deprecated
